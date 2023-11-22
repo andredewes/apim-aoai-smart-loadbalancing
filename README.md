@@ -1,4 +1,4 @@
-![Smart APIM load balancing](./images/intro-image.png)
+![Smart APIM load balancing](./images/intro-loadbalance.png)
 
 # Smart load balancing for OpenAI endpoints and Azure API Management:vertical_traffic_light::rocket::sparkles:
 
