@@ -1,3 +1,5 @@
+![Smart APIM load balancing](./images/intro-image.png)
+
 # Smart load balancing for OpenAI endpoints and Azure API Management:vertical_traffic_light: 
 
 One of the top challenges building OpenAI solutions in Azure is to handle and manage the limitations around [quotas](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits), especially if your application needs to handle a high volume of traffic.
@@ -205,6 +207,6 @@ Yes. Retries with exponential backoffs are a good fit for client applications an
 
 Check the difference in the API Management capacity metric with the same number of requests per minute:
 
-![apim-capacity!](/images/Apim_Retry.png)
+![apim-capacity!](/images/apim-retry.png)
 
-The left part of the chart shows 20% average capacity for 4K RPM with API Management sends the response immediately. The right part of the chart shows 60% average capacity utilization with the same 4K RPM! Just because it holds the connection longer. The same behavior will happen if you configure API Management retries with waiting times: you will add extra pressure and it even might become a single point of failure in high traffic situations.
+The left part of the chart shows 20% average capacity for 4K RPM with API Management sends the response immediately. The right part of the chart shows 60% average capacity utilization with the same 4K RPM! Just because it holds the connection longer. That's 3 times more! The same behavior will happen if you configure API Management retries with waiting times: you will add extra pressure and it even might become a single point of failure in high traffic situations.
