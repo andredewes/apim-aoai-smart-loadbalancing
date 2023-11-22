@@ -4,7 +4,7 @@ One of the top challenges building OpenAI solutions in Azure is to handle and ma
 
 This repo aims to provide you with a building block utilizing Azure API Management to seamless expose a single endpoint for your applications while keeping an efficient logic to consume your OpenAI backends. It is not a simple round-robin balancer like many other solutions out there.
 
-## Why do you call this "smart" and different from round-robin load balancers?:question:
+## Why do you call this "smart" and different from round-robin load balancers?:trident:
 
 One of the key components of handling OpenAI throttling is to be aware of the HTTP status code error 429 (Too Many Requests). There is a [Tokens-Per-Minute and a Requests-Per-Minute](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/quota?tabs=rest#understanding-rate-limits) in Azure OpenAI. Both situations will return the same error 429.
 
@@ -194,3 +194,6 @@ You just need to copy the contents of the [policy XML](apim-policy.xml), modify 
 
 ### What happens if all backends are throttling at the same time?
 In that case, the policy will return the first backend in the list (line 158) and will forward the request to it. Since that endpoint is throttling, API Management will return the same 429 error as the OpenAI backend. That's why it is **still important for your client application/SDKs to have a logic to handle retries**, even though it should be much less frequent.
+
+### I am updating the backend list in the policies but it seems to keep the old list
+That is because the policy is coded to only create the backend list after it expires in the internal cache, after 60 seconds. That means if your API Management instance is getting at least one request every 60 seconds, that cache will not expire to pick up your latest changes. You can either manually remove the cached "listBackends" key by using [cache-remove-key](https://learn.microsoft.com/azure/api-management/cache-remove-value-policy) policy or call its Powershell operation to [remove a cache](https://learn.microsoft.com/powershell/module/az.apimanagement/remove-azapimanagementcache?view=azps-10.4.1)
