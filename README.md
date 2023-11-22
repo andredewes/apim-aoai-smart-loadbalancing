@@ -6,7 +6,7 @@ One of the top challenges building OpenAI solutions in Azure is to handle and ma
 
 This repo aims to provide you with a building block utilizing Azure API Management to seamless expose a single endpoint for your applications while keeping an efficient logic to consume your OpenAI backends. It is not a simple round-robin balancer like many other solutions out there.
 
-## Why do you call this "smart" and different from round-robin load balancers?:trident:
+## Why do you call this "smart" and different from round-robin load balancers?:sparkles:
 
 One of the key components of handling OpenAI throttling is to be aware of the HTTP status code error 429 (Too Many Requests). There is a [Tokens-Per-Minute and a Requests-Per-Minute](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/quota?tabs=rest#understanding-rate-limits) in Azure OpenAI. Both situations will return the same error 429.
 
