@@ -1,6 +1,6 @@
 ![Smart APIM load balancing](./images/intro-image.png)
 
-# Smart load balancing for OpenAI endpoints and Azure API Management:vertical_traffic_light: 
+# Smart load balancing for OpenAI endpoints and Azure API Management:vertical_traffic_light::rocket::sparkles:
 
 One of the top challenges building OpenAI solutions in Azure is to handle and manage the limitations around [quotas](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits), especially if your application needs to handle a high volume of traffic.
 
