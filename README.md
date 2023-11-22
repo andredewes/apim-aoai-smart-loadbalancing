@@ -204,13 +204,13 @@ That is because the policy is coded to only create the backend list after it exp
 Sure. That's how it works when API Management gets a new incoming request:
 
 1. From the list of backends defined in the JSON array, it will pick one backend using this logic:
-2. Selects the highest priority (lower number) that is not currently throttling. If it finds more than one healthy backend with the same priority, it will randomly select one of them
-3. Sends the request to the chosen backend URL
+   1. Selects the highest priority (lower number) that is not currently throttling. If it finds more than one healthy backend with the same priority, it will randomly select one of them
+2. Sends the request to the chosen backend URL
     1. If the backend responds with success (HTTP status code 200), the response is passed to the client and the flow ends here
     2. If the backend responds with error 429 or 5xx
         1. It will read the HTTP response header "Retry-After" to see when it will become available again
         2. Then, it marks that specific backend URL as throttling and also saves what time it will be healthy again
-        3. If there are still other available backends in the pool, it runs again the logic to select another backend (go to the point 2. again and so on)
+        3. If there are still other available backends in the pool, it runs again the logic to select another backend (go to the point 1. again and so on)
         4. If there are no backends available (all are throttling), it will send the customer request to the first backend defined in the list and return its response
 
 ### Are you sure that not having a waiting delay in API Management between the retries is the best way to do? I don't see a problem if client needs to wait more to have better chances to get a response.
