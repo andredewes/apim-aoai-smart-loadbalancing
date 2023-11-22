@@ -8,13 +8,13 @@ This repo aims to provide you with a building block utilizing Azure API Manageme
 
 ## Why do you call this "smart" and different from round-robin load balancers?:sparkles:
 
-One of the key components of handling OpenAI throttling is to be aware of the HTTP status code error 429 (Too Many Requests). There is a [Tokens-Per-Minute and a Requests-Per-Minute](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/quota?tabs=rest#understanding-rate-limits) in Azure OpenAI. Both situations will return the same error 429.
+One of the key components of handling OpenAI throttling is to be aware of the HTTP status code error 429 (Too Many Requests). There are [Tokens-Per-Minute and a Requests-Per-Minute](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/quota?tabs=rest#understanding-rate-limits) rate limiting in Azure OpenAI. Both situations will return the same error code 429.
 
 Together with that HTTP status code 429, Azure OpenAI will also return a HTTP response header called "Retry-After", which is the number of seconds that instance will be unavailable before it starts accepting requests again.
 
 These errors are normally handled in the client-side by SDKs. This works great if you have a single API endpoint. However, for multiple OpenAI endpoints (used for fallback) you would need to manage the list of URLs in the client-side too which is not ideal.
 
-What makes this API Management solution different than others is that it is aware of the "Retry-After" and 429 errors and intelligently sends traffic to other OpenAI backends that are not currently throttling without randomly picking any backend. You can even have a priority order in your backends, so the highest priority are the ones being consumed while they are not throttling. When that happens, API Management will fall back to lower priority backends while your highest ones are waiting to recover. 
+What makes this API Management solution different than others is that it is aware of the "Retry-After" and 429 errors and intelligently sends traffic to other OpenAI backends that are not currently throttling. You can even have a priority order in your backends, so the highest priority are the ones being consumed first while they are not throttling. When throttling kicks in, API Management will fall back to lower priority backends while your highest ones are waiting to recover. 
 
 Another important feature: there is no time interval between attempts to call different backends. Many of API Management sample policies out there configure a waiting internal (often exponential). While this is a good idea doing at the client side, making API Management to wait in the server-side of things is not a good practice because you hold your client and consume more API Management capacity during this waiting time. Retries on the server-side should be immediate and to a different endpoint.
 
@@ -199,6 +199,19 @@ In that case, the policy will return the first backend in the list (line 158) an
 
 ### I am updating the backend list in the policies but it seems to keep the old list
 That is because the policy is coded to only create the backend list after it expires in the internal cache, after 60 seconds. That means if your API Management instance is getting at least one request every 60 seconds, that cache will not expire to pick up your latest changes. You can either manually remove the cached "listBackends" key by using [cache-remove-key](https://learn.microsoft.com/azure/api-management/cache-remove-value-policy) policy or call its Powershell operation to [remove a cache](https://learn.microsoft.com/powershell/module/az.apimanagement/remove-azapimanagementcache?view=azps-10.4.1)
+
+### Reading the policy logic is hard for me. Can you describe it in plain english?
+Sure. That's how it works when API Management gets a new incoming request:
+
+1. From the list of backends defined in the JSON array, it will pick one backend using this logic:
+2. Selects the highest priority (lower number) that is not currently throttling. If it finds more than one healthy backend with the same priority, it will randomly select one of them
+3. Sends the request to the chosen backend URL
+    1. If the backend responds with success (HTTP status code 200), the response is passed to the client and the flow ends here
+    2. If the backend responds with error 429 or 5xx
+        1. It will read the HTTP response header "Retry-After" to see when it will become available again
+        2. Then, it marks that specific backend URL as throttling and also saves what time it will be healthy again
+        3. If there are still other available backends in the pool, it runs again the logic to select another backend (go to the point 2. again and so on)
+        4. If there are no backends available (all are throttling), it will send the customer request to the first backend defined in the list and return its response
 
 ### Are you sure that not having a waiting delay in API Management between the retries is the best way to do? I don't see a problem if client needs to wait more to have better chances to get a response.
 Yes. Retries with exponential backoffs are a good fit for client applications and not servers/backends. To prove that point, I did an experiment: in a given API Management instance, I made a JMeter load testing script that will call it 4000 times per minute:
