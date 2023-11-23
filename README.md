@@ -1,4 +1,4 @@
-# Smart load balancing for OpenAI endpoints and Azure API Management:vertical_traffic_light::rocket::sparkles:
+# :rocket: Smart load balancing for OpenAI endpoints and Azure API Management
 
 One of the top challenges building OpenAI solutions in Azure is to handle and manage the limitations around [quotas](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits), especially if your application needs to handle a high volume of traffic.
 
@@ -6,7 +6,7 @@ This repo aims to provide you with a building block utilizing Azure API Manageme
 
 ![Smart APIM load balancing](./images/intro-loadbalance.png)
 
-## Why do you call this "smart" and different from round-robin load balancers?:sparkles:
+## :sparkles: Why do you call this "smart" and different from round-robin load balancers?
 
 One of the key components of handling OpenAI throttling is to be aware of the HTTP status code error 429 (Too Many Requests). There are [Tokens-Per-Minute and a Requests-Per-Minute](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/quota?tabs=rest#understanding-rate-limits) rate limiting in Azure OpenAI. Both situations will return the same error code 429.
 
@@ -24,7 +24,7 @@ Check this diagram for easier understanding:
 
 ![throttling!](/images/apim-loadbalancing-throttling.png "Throttling scenario")
 
-## Priorities:1234:
+## :1234: Priorities
 
 One thing that stands out in the above images is the concept of "priority groups". Why do we have that? That's because you might want to consume all your available quota in specific instances before falling back to others. For example, in this scenario:
 - You have a [TPU (Provisioned Throughput)](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/provisioned-throughput) deployment. You want to consume all its capacity first because you are paying for this either you use it or not. You can set this instance(s) as **Priority 1**
@@ -39,7 +39,7 @@ Another scenario:
 
 And what happens if I have multiple backends with the same priority? Let's assume I have 3 OpenAI backends in USA with all Priority = 1 and all of them are not throttling? In this case, the algorithm will randomly pick among these 3 URLs.
 
-## Working with the policy:page_with_curl:
+## :page_with_curl: Working with the policy
 
 I'm using [API Management policies](https://learn.microsoft.com/azure/api-management/api-management-howto-policies) to define all this logic. API Management It doesn't have built-in support for this scenario but by using custom policies we can achieve it. Let's take a look in the most important parts of the policy:
 
@@ -189,7 +189,7 @@ This policy is currently using API Management internal cache mode. That is a in-
 So, it might occur that internally, API Management instances will try route to throttled backends and will need to reroute. Eventually, all instances will be in sync again at a small cost of unnecessary roundtrips to throttled endpoints.
 I honestly think this is a very small price to pay, but if you want to solve that you can always change API Management [to use an external Redis cache](https://learn.microsoft.com/azure/api-management/api-management-howto-cache-external) so all instances will share the same cached object.
 
-## FAQ:question:
+## :question: FAQ
 
 ### I don't know anything about API Management. Where and how I add this code?
 You just need to copy the contents of the [policy XML](apim-policy.xml), modify the backends list (from line 21 to 83) and paste into one of your APIs policies. There is an easy tutorial on how to do that [here](https://learn.microsoft.com/azure/api-management/set-edit-policies?tabs=form).
