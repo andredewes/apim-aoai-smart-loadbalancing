@@ -1,10 +1,10 @@
+![Smart APIM load balancing](./images/intro-loadbalance.png)
+
 # :rocket: Smart load balancing for OpenAI endpoints and Azure API Management
 
 One of the top challenges building OpenAI solutions in Azure is to handle and manage the limitations around [quotas](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits), especially if your application needs to handle a high volume of traffic.
 
 This repo aims to provide you with a building block utilizing Azure API Management to seamless expose a single endpoint for your applications while keeping an efficient logic to consume your OpenAI backends. It is not a simple round-robin balancer like many other solutions out there.
-
-![Smart APIM load balancing](./images/intro-loadbalance.png)
 
 ## :sparkles: Why do you call this "smart" and different from round-robin load balancers?
 
