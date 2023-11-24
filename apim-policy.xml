@@ -155,6 +155,7 @@
                 }
                 else
                 {
+                    //If there are no available backends, the request will be sent to the first one
                     return 0;    
                 }
                 }" />

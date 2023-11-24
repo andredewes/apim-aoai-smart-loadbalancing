@@ -214,7 +214,7 @@ Sure. That's how it works when API Management gets a new incoming request:
         4. If there are no backends available (all are throttling), it will send the customer request to the first backend defined in the list and return its response
 
 ### Are you sure that not having a waiting delay in API Management between the retries is the best way to do? I don't see a problem if client needs to wait more to have better chances to get a response.
-Yes. Retries with exponential backoffs are a good fit for client applications and not servers/backends. To prove that point, I did an experiment: in a given API Management instance, I made a JMeter load testing script that will call it 4000 times per minute:
+Yes. Retries with exponential backoffs are a good fit for client applications and not servers/backends. Especially in this case, in which we need to buffer the HTTP body contents between the retries (```<forward-request buffer-request-body="true" />```), spending more time before sending the response has a heavy cost. To prove that point, I did an experiment: in a given API Management instance, I made a JMeter load testing script that will call it 4000 times per minute:
 - One endpoint (called "No retry" in the image below) will just return HTTP status code 200 immediately
 - The second endpoint (called "Retry in APIM" in the image below) will respond the same thing but it takes 30 seconds before doing so. In that mean time, the client keeps "waiting" and connection is kept open
 
