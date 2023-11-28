@@ -2,9 +2,9 @@
 
 # :rocket: Smart load balancing for OpenAI endpoints and Azure API Management
 
-One of the top challenges building OpenAI solutions in Azure is to handle and manage the limitations around [quotas](https://learn.microsoft.com/azure/ai-services/openai/quotas-limits), especially if your application needs to handle a high volume of traffic.
+Many service providers, including OpenAI usually set limits on the number of calls that can be made. In the case of Azure OpenAI, there are token limits (TPM or tokens per minute) and limits on the number of requests per minute. When a server starts running out of resources or the service limits are exhausted, the provider may issue a 429 or TooManyRequests HTTP Status code, and also a Retry-After response header indicating how much time you should wait until you try the next request.
 
-This repo aims to provide you with a building block utilizing Azure API Management to seamless expose a single endpoint for your applications while keeping an efficient logic to consume your OpenAI backends. It is not a simple round-robin balancer like many other solutions out there.
+The solution presented here is part of comprehensive one that takes into consideration things like a good UX/workflow design, adding application resiliency and fault-handling logic, considering service limits, choosing the right model for the job, the API policies, setting up logging and monitoring among other considerations. The solution shows how to create an Azure API Management Policy to seamlessly expose a single endpoint to your applications while keeping an efficient logic to consume two or more OpenAI or any API backends based on availability and priority.
 
 ## :sparkles: Why do you call this "smart" and different from round-robin load balancers?
 
@@ -27,11 +27,11 @@ Check this diagram for easier understanding:
 ## :1234: Priorities
 
 One thing that stands out in the above images is the concept of "priority groups". Why do we have that? That's because you might want to consume all your available quota in specific instances before falling back to others. For example, in this scenario:
-- You have a [TPU (Provisioned Throughput)](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/provisioned-throughput) deployment. You want to consume all its capacity first because you are paying for this either you use it or not. You can set this instance(s) as **Priority 1**
-- Then you have extra deployments using the default S0 tier (token-based consumption model) spread in different Azure regions which you would like to fallback in case your TPU instance is fully occupied and returning errors 429. Here you don't have a fixed pricing model like in TPU but you will consume these endpoints only during the period that TPU is not available. You can set these as **Priority 2**
+- You have a [PTU (Provisioned Throughput)](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/provisioned-throughput) deployment. You want to consume all its capacity first because you are paying for this either you use it or not. You can set this instance(s) as **Priority 1**
+- Then you have extra deployments using the default S0 tier (token-based consumption model) spread in different Azure regions which you would like to fallback in case your PTU instance is fully occupied and returning errors 429. Here you don't have a fixed pricing model like in PTU but you will consume these endpoints only during the period that PTU is not available. You can set these as **Priority 2**
 
 Another scenario:
-- You don't have any TPU (provisioned) deployment but you would like to have many S0 (token-based consumption model) spread in different Azure regions in case you hit throttling. Let's assume your applications are mostly in USA.
+- You don't have any PTU (provisioned) deployment but you would like to have many S0 (token-based consumption model) spread in different Azure regions in case you hit throttling. Let's assume your applications are mostly in USA.
 - You then deploy one instance of OpenAI in each region of USA that has OpenAI capacity. You can set these instance(s) as **Priority 1**
 - However, if all USA instances are getting throttled, you have another set of endpoints in Canada, which is closest region outside of USA. You can set these instance(s) as **Priority 2**
 - Even if Canada also gets throttling at the same at as your USA instances, you can fallback to European regions now. You can set these instance(s) as **Priority 3**
@@ -74,14 +74,6 @@ I'm using [API Management policies](https://learn.microsoft.com/azure/api-manage
 
     backends.Add(new JObject()
     {
-        { "url", "https://andre-openai-northcentralus.openai.azure.com/" },
-        { "priority", 1},
-        { "isThrottling", false },
-        { "retryAfter", DateTime.MinValue }
-    });
-
-    backends.Add(new JObject()
-    {
         { "url", "https://andre-openai-canadaeast.openai.azure.com/" },
         { "priority", 2},
         { "isThrottling", false },
@@ -96,35 +88,11 @@ I'm using [API Management policies](https://learn.microsoft.com/azure/api-manage
         { "retryAfter", DateTime.MinValue }
     });
 
-    backends.Add(new JObject()
-    {
-        { "url", "https://andre-openai-uksouth.openai.azure.com/" },
-        { "priority", 3},
-        { "isThrottling", false },
-        { "retryAfter", DateTime.MinValue }
-    });
-
-    backends.Add(new JObject()
-    {
-        { "url", "https://andre-openai-westeurope.openai.azure.com/" },
-        { "priority", 3},
-        { "isThrottling", false },
-        { "retryAfter", DateTime.MinValue }
-    });
-
-    backends.Add(new JObject()
-    {
-        { "url", "https://andre-openai-australia.openai.azure.com/" },
-        { "priority", 4},
-        { "isThrottling", false },
-        { "retryAfter", DateTime.MinValue }
-    });
-
     return backends;   
 }" />
 ```
 
-The variable "set-backends" at the beginning of the policy is the **only thing you need to change** to list your backends and their priorities. We will use this array of JSON objects in API Management cache to share this property in the scope of all other incoming requests and not only in the scope of the current request.
+The variable "set-backends" at the beginning of the policy is the **only thing you need to change** to list your backends and their priorities. In the above sample, we are telling API Management to consume US endpoints first and then falling back to Canada East and then France Central regions. We will use this array of JSON objects in API Management cache to share this property in the scope of all other incoming requests and not only in the scope of the current request. 
 
 ```xml
 <authentication-managed-identity resource="https://cognitiveservices.azure.com" output-token-variable-name="msi-access-token" ignore-error="false" />
