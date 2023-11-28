@@ -92,7 +92,7 @@ I'm using [API Management policies](https://learn.microsoft.com/azure/api-manage
 }" />
 ```
 
-The variable "set-backends" at the beginning of the policy is the **only thing you need to change** to list your backends and their priorities. In the above sample, we are telling API Management to consume US endpoints first and then falling back to Canada East and then France Central regions. We will use this array of JSON objects in API Management cache to share this property in the scope of all other incoming requests and not only in the scope of the current request. 
+The variable "set-backends" at the beginning of the policy is the **only thing you need to change** to list your backends and their priorities. In the above sample, we are telling API Management to consume US endpoints first (priority 1) and then falling back to Canada East (priority 2) and then France Central region (priority 3). We will use this array of JSON objects in API Management cache to share this property in the scope of all other incoming requests and not only in the scope of the current request. 
 
 ```xml
 <authentication-managed-identity resource="https://cognitiveservices.azure.com" output-token-variable-name="msi-access-token" ignore-error="false" />
