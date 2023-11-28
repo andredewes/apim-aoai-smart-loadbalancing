@@ -2,7 +2,7 @@
 
 # :rocket: Smart load balancing for OpenAI endpoints and Azure API Management
 
-Many service providers, including OpenAI usually set limits on the number of calls that can be made. In the case of Azure OpenAI, there are token limits (TPM or tokens per minute) and limits on the number of requests per minute. When a server starts running out of resources or the service limits are exhausted, the provider may issue a 429 or TooManyRequests HTTP Status code, and also a Retry-After response header indicating how much time you should wait until you try the next request.
+Many service providers, including OpenAI usually set limits on the number of calls that can be made. In the case of Azure OpenAI, there are token limits (TPM or tokens per minute) and limits on the number of requests per minute (RPM). When a server starts running out of resources or the service limits are exhausted, the provider may issue a 429 or TooManyRequests HTTP Status code, and also a Retry-After response header indicating how much time you should wait until you try the next request.
 
 The solution presented here is part of comprehensive one that takes into consideration things like a good UX/workflow design, adding application resiliency and fault-handling logic, considering service limits, choosing the right model for the job, the API policies, setting up logging and monitoring among other considerations. The solution shows how to create an Azure API Management Policy to seamlessly expose a single endpoint to your applications while keeping an efficient logic to consume two or more OpenAI or any API backends based on availability and priority.
 
@@ -186,7 +186,7 @@ Yes. Retries with exponential backoffs are a good fit for client applications an
 - One endpoint (called "No retry" in the image below) will just return HTTP status code 200 immediately
 - The second endpoint (called "Retry in APIM" in the image below) will respond the same thing but it takes 30 seconds before doing so. In that mean time, the client keeps "waiting" and connection is kept open
 
-Check the difference in the API Management capacity metric with the same number of requests per minute:
+Check the difference in the API Management capacity metric with the same number of  minute:
 
 ![apim-capacity!](/images/apim-retry.png)
 
