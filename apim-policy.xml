@@ -169,7 +169,17 @@
                     <set-variable name="listBackends" value="@{
                         JArray backends = (JArray)context.Variables["listBackends"];
                         int currentBackendIndex = context.Variables.GetValueOrDefault<int>("backendIndex");
-                        int retryAfter = Convert.ToInt32(context.Response.Headers.GetValueOrDefault("Retry-After", "10"));
+                        int retryAfter = Convert.ToInt32(context.Response.Headers.GetValueOrDefault("Retry-After", "-1"));
+
+                        if (retryAfter == -1)
+                        {
+                            retryAfter = Convert.ToInt32(context.Response.Headers.GetValueOrDefault("x-ratelimit-reset-requests", "-1"));
+                        }
+
+                        if (retryAfter == -1)
+                        {
+                            retryAfter = Convert.ToInt32(context.Response.Headers.GetValueOrDefault("x-ratelimit-reset-tokens", "10"));
+                        }
 
                         JObject backend = (JObject)backends[currentBackendIndex];
                         backend["isThrottling"] = true;
