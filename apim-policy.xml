@@ -159,7 +159,7 @@
                     return 0;    
                 }
                 }" />
-            <set-variable name="backendUrl" value="@(((JObject)((JArray)context.Variables["listBackends"])[(Int32)context.Variables["backendIndex"]]).Value<string>("url"))" />
+            <set-variable name="backendUrl" value="@(((JObject)((JArray)context.Variables["listBackends"])[(Int32)context.Variables["backendIndex"]]).Value<string>("url") + "openai")" />
             <set-backend-service base-url="@((string)context.Variables["backendUrl"])" />
             <forward-request buffer-request-body="true" />
             <choose>
