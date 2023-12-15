@@ -42,10 +42,10 @@ And what happens if I have multiple backends with the same priority? Let's assum
 ## :gear: Setup instructions
 
 1. Provision an [Azure API Management instance](https://learn.microsoft.com/en-us/azure/api-management/get-started-create-service-instance) and ensure that you enable `Managed Identity` during provisioning.
-1. Provision your Azure OpenAI Service instances and deploy the same models and versions in each instance, while giving them the same name (e.g., name your deployment `gpt-35-turbo` or `gpt4-8k` in each instance and select the same version, e.g., `0613`)
-1. For each Azure OpenAI Service instance, we need to add the Managed Identity of the API Management. For this, goto each Azure OpenAI instance in the Azure Portal, click `Access control (IAM)`, click `+ Add`, click `Add role assignment`, select the role `Cognitive Services OpenAI User`, click Next, select `Managed Identity` under `Assign access to`, then `+ Select Members`, and select the Managed Identity of your API Management instance. 
-1. Download the desired API schema for Azure OpenAI Service, e.g., version [`2023-12-01-preview`](https://raw.githubusercontent.com/Azure/azure-rest-api-specs/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2023-12-01-preview/inference.json) or [any other version](https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview)
-1. Open `inference.json` in the editor of your choice and update the `servers` section ontop:
+2. Provision your Azure OpenAI Service instances and deploy the same models and versions in each instance, while giving them the same name (e.g., name your deployment `gpt-35-turbo` or `gpt4-8k` in each instance and select the same version, e.g., `0613`)
+3. For each Azure OpenAI Service instance, we need to add the Managed Identity of the API Management. For this, goto each Azure OpenAI instance in the Azure Portal, click `Access control (IAM)`, click `+ Add`, click `Add role assignment`, select the role `Cognitive Services OpenAI User`, click Next, select `Managed Identity` under `Assign access to`, then `+ Select Members`, and select the Managed Identity of your API Management instance. 
+4. Download the desired API schema for Azure OpenAI Service, e.g., version [`2023-12-01-preview`](https://raw.githubusercontent.com/Azure/azure-rest-api-specs/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2023-12-01-preview/inference.json) or [any other version](https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview)
+5. Open `inference.json` in the editor of your choice and update the `servers` section ontop:
     ```
     "servers": [
         {
@@ -59,10 +59,12 @@ And what happens if I have multiple backends with the same priority? Let's assum
     ],
     ```
     We won't use this, but in order to import the file into API Management, we need to a correct URL there.
-1. Goto your API Management instance in the Azure Portal, then select `API` on the left side, click `+ Add API` and select `OpenAI`
-1. Load your `inference.json` and click `Create`
-1. Select the new API, goto `Settings`, goto `Subscription` and ensure `Subscription required` is checked and `Header name` is set to `api-key`. This is important to ensure compatibility with the OpenAI SDK.
-1. Now edit `apim-policy.xml` from this repo and update the backend section as needed:
+6. Goto your API Management instance in the Azure Portal, then select `API` on the left side, click `+ Add API` and select `OpenAI`
+7. Load your `inference.json` and click `Create`.
+> [!NOTE]   
+> If you are using the Azure OpenAI SDK, make sure you set the API suffix to "something/**openai**". For example, "openai-load-balancing/**openai**". This is needed because the Azure OpenAI SDK automatically appends "/openai" in the requests and if that is missing in the API suffix, API Management will return 404 Not Found. Unless you want to use the API suffix solely as "openai", then there is no need to duplicate like "openai/openai".
+8. Select the new API, goto `Settings`, goto `Subscription` and ensure `Subscription required` is checked and `Header name` is set to `api-key`. This is important to ensure compatibility with the OpenAI SDK.
+9. Now edit `apim-policy.xml` from this repo and update the backend section as needed:
     ```
     backends.Add(new JObject()
     {
@@ -74,20 +76,20 @@ And what happens if I have multiple backends with the same priority? Let's assum
     ...
     ```
     Make sure you add all the Azure OpenAI instances you want to use and assign them the desired priority.
-1. Goto back to API Management, select `Design`, select `All operations` and click the `</>` icon in inbound processing. Replace the code with the contents of your `apim-policy.xml`, then hit `Save`.
-1. Lastly, goto `Subscriptions` (left menu) in API Management, select `+ Add Subscription`, give it a name and scope it `API` and select your `Azure OpenAI Service API`, click `Create`.
-1. Then test if everything works by running some code of your choice, e.g., this code with OpenAI Python SDK:
+10. Goto back to API Management, select `Design`, select `All operations` and click the `</>` icon in inbound processing. Replace the code with the contents of your `apim-policy.xml`, then hit `Save`.
+11. Lastly, goto `Subscriptions` (left menu) in API Management, select `+ Add Subscription`, give it a name and scope it `API` and select your `Azure OpenAI Service API`, click `Create`.
+12. Then test if everything works by running some code of your choice, e.g., this code with OpenAI Python SDK:
     ```python
     from openai import AzureOpenAI
 
     client = AzureOpenAI(
-        azure_endpoint="https://<your APIM endpoint>.azure-api.net/",
+        azure_endpoint="https://<your_APIM_endpoint>.azure-api.net/<your_api_suffix>", #do not add "/openai" at the end here because this will be automatically added by this SDK
         api_key="<your subscription key>",
         api_version="2023-12-01-preview"
     )
 
     response = client.chat.completions.create(
-        model="gpt-35-turbo",
+        model="<your_deployment_name>",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
