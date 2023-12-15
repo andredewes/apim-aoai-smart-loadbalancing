@@ -39,6 +39,63 @@ Another scenario:
 
 And what happens if I have multiple backends with the same priority? Let's assume I have 3 OpenAI backends in USA with all Priority = 1 and all of them are not throttling? In this case, the algorithm will randomly pick among these 3 URLs.
 
+## :gear: Setup instructions
+
+1. Provision an [Azure API Management instance](https://learn.microsoft.com/en-us/azure/api-management/get-started-create-service-instance) and ensure that you enable `Managed Identity` during provisioning.
+1. Provision your Azure OpenAI Service instances and deploy the same models and versions in each instance, while giving them the same name (e.g., name your deployment `gpt-35-turbo` or `gpt4-8k` in each instance and select the same version, e.g., `0613`)
+1. For each Azure OpenAI Service instance, we need to add the Managed Identity of the API Management. For this, goto each Azure OpenAI instance in the Azure Portal, click `Access control (IAM)`, click `+ Add`, click `Add role assignment`, select the role `Cognitive Services OpenAI User`, click Next, select `Managed Identity` under `Assign access to`, then `+ Select Members`, and select the Managed Identity of your API Management instance. 
+1. Download the desired API schema for Azure OpenAI Service, e.g., version [`2023-12-01-preview`](https://raw.githubusercontent.com/Azure/azure-rest-api-specs/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview/2023-12-01-preview/inference.json) or [any other version](https://github.com/Azure/azure-rest-api-specs/tree/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/preview)
+1. Open `inference.json` in the editor of your choice and update the `servers` section ontop:
+    ```
+    "servers": [
+        {
+        "url": "https://microsoft.com/openai",
+        "variables": {
+            "endpoint": {
+            "default": "itdoesntmatter.openai.azure.com"
+            }
+        }
+        }
+    ],
+    ```
+    We won't use this, but in order to import the file into API Management, we need to a correct URL there.
+1. Goto your API Management instance in the Azure Portal, then select `API` on the left side, click `+ Add API` and select `OpenAI`
+1. Load your `inference.json` and click `Create`
+1. Select the new API, goto `Settings`, goto `Subscription` and ensure `Subscription required` is checked and `Header name` is set to `api-key`. This is important to ensure compatibility with the OpenAI SDK.
+1. Now edit `apim-policy.xml` from this repo and update the backend section as needed:
+    ```
+    backends.Add(new JObject()
+    {
+        { "url", "https://andre-openai-eastus.openai.azure.com/" },
+        { "priority", 1},
+        { "isThrottling", false }, 
+        { "retryAfter", DateTime.MinValue } 
+    });
+    ...
+    ```
+    Make sure you add all the Azure OpenAI instances you want to use and assign them the desired priority.
+1. Goto back to API Management, select `Design`, select `All operations` and click the `</>` icon in inbound processing. Replace the code with the contents of your `apim-policy.xml`, then hit `Save`.
+1. Lastly, goto `Subscriptions` (left menu) in API Management, select `+ Add Subscription`, give it a name and scope it `API` and select your `Azure OpenAI Service API`, click `Create`.
+1. Then test if everything works by running some code of your choice, e.g., this code with OpenAI Python SDK:
+    ```python
+    from openai import AzureOpenAI
+
+    client = AzureOpenAI(
+        azure_endpoint="https://<your APIM endpoint>.azure-api.net/",
+        api_key="<your subscription key>",
+        api_version="2023-12-01-preview"
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-35-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
+        ]
+    )
+    print(response)
+    ```
+
 ## :page_with_curl: Working with the policy
 
 I'm using [API Management policies](https://learn.microsoft.com/azure/api-management/api-management-howto-policies) to define all this logic. API Management doesn't have built-in support for this scenario but by using custom policies we can achieve it. Let's take a look in the most important parts of the policy:
@@ -92,7 +149,7 @@ I'm using [API Management policies](https://learn.microsoft.com/azure/api-manage
 }" />
 ```
 
-The variable "set-backends" at the beginning of the policy is the **only thing you need to change** to list your backends and their priorities. In the above sample, we are telling API Management to consume US endpoints first (priority 1) and then falling back to Canada East (priority 2) and then France Central region (priority 3). We will use this array of JSON objects in API Management cache to share this property in the scope of all other incoming requests and not only in the scope of the current request. 
+The variable `listBackends` at the beginning of the policy is the **only thing you need to change** to configure your backends and their priorities. In the above sample, we are telling API Management to consume US endpoints first (priority 1) and then falling back to Canada East (priority 2) and then France Central region (priority 3). We will use this array of JSON objects in API Management cache to share this property in the scope of all other incoming requests and not only in the scope of the current request. 
 
 ```xml
 <authentication-managed-identity resource="https://cognitiveservices.azure.com" output-token-variable-name="msi-access-token" ignore-error="false" />
